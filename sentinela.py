@@ -8,16 +8,15 @@ import google.generativeai as genai
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
-from oauth2client.service_account import ServiceAccountCredentials
 
 # --- CONFIGURAÇÕES ---
 SERPER_API_KEY = os.getenv("SERPER_API_KEY")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") # Trouxemos de volta!
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 EMAIL_REMETENTE = os.getenv("EMAIL_REMETENTE")
 SENHA_APP = os.getenv("SENHA_APP")
 GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")
 
-# Lista de Sites (42 Fontes)
+# Lista de Sites
 SITES_ALVO = [
     "site:gov.br", "site:edu.br", "site:org.br", "site:b.br",
     "site:fapergs.rs.gov.br", "site:hcpa.edu.br", "site:ufrgs.br", "site:ufcspa.edu.br",
@@ -51,7 +50,7 @@ def buscar_google_elite():
         filtro_sites = " OR ".join(bloco)
         query_final = f"{query_base} ({filtro_sites})"
         
-        # Pede 10 resultados por bloco (qdr:m = último mês)
+        # Pede 10 resultados por bloco
         payload = json.dumps({"q": query_final, "tbs": "qdr:m", "gl": "br"})
         
         try:
@@ -60,8 +59,7 @@ def buscar_google_elite():
             items = dados.get("organic", [])
             
             for item in items:
-                # Prepara o texto para o Gemini ler
-                linha = f"- Título: {item.get('title')}\n  Link: {item.get('link')}\n  Snippet: {item.get('snippet')}\n  Data Google: {item.get('date', 'N/A')}\n"
+                linha = f"- Título: {item.get('title')}\n  Link: {item.get('link')}\n  Snippet: {item.get('snippet')}\n  Data: {item.get('date', 'N/A')}\n"
                 resultados_texto.append(linha)
             
             time.sleep(0.5)
@@ -72,42 +70,56 @@ def buscar_google_elite():
     print(f"✅ Busca concluída. {len(resultados_texto)} itens para análise.\n")
     return "\n".join(resultados_texto)
 
+def gerar_html_manual(texto_bruto):
+    """PARAQUEDAS: Se a IA falhar, formata um HTML simples"""
+    print("⚠️ Usando formatador manual de emergência...")
+    linhas = texto_bruto.split("- Título: ")
+    html = "<h2>☢️ Sentinela: Relatório de Emergência</h2><p>A IA estava indisponível, mas aqui estão seus links:</p><ul>"
+    
+    for item in linhas:
+        if "Link: " in item:
+            partes = item.split("\n")
+            titulo = partes[0].strip()
+            link = ""
+            for p in partes:
+                if "Link: " in p: link = p.replace("Link: ", "").strip()
+            
+            if link:
+                html += f"<li><a href='{link}'><b>{titulo}</b></a></li>"
+    
+    html += "</ul>"
+    return html
+
 def analisar_com_gemini(texto_bruto):
-    """Etapa 2: Gemini formata e resume (menos rigoroso)"""
-    print("🧠 2. ACIONANDO GEMINI (Modo Editor)...")
+    """Etapa 2: Gemini formata e resume"""
+    print("🧠 2. ACIONANDO GEMINI 1.5 FLASH...")
     
     if not texto_bruto: return None
 
     genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel('gemini-2.0-flash')
+    
+    # MUDANÇA IMPORTANTE: Trocamos para o modelo 1.5 que é mais estável
+    model = genai.GenerativeModel('gemini-1.5-flash')
 
-    # PROMPT AJUSTADO: Foco em formatação, não em exclusão.
     prompt = f"""
     Você é um Editor de Conteúdo Científico (Física Médica).
-    Abaixo estão resultados de busca vindos de fontes confiáveis.
+    Organize estes links em um e-mail HTML.
     
-    SUA MISSÃO:
-    1. Organize esses links em um e-mail HTML bonito e legível.
-    2. NÃO FILTRE RIGOROSAMENTE. A menos que seja um link quebrado ou totalmente nada a ver (ex: política de cookies), MANTENHA O LINK.
-    3. Resuma o "Snippet" para explicar do que se trata em 1 linha.
-    4. Se houver menção de DATAS ou PRAZOS no texto, destaque em NEGRITO.
-    5. Agrupe, se possível (ex: Nacional vs Internacional).
-    
-    FORMATO DE SAÍDA:
-    Apenas o código HTML (body). Use cores sóbrias (azul escuro para links).
-    Comece com <h2>☢️ Sentinela: Novas Oportunidades</h2>.
-    
-    DADOS PARA PROCESSAR:
+    DADOS:
     {texto_bruto}
+    
+    SAÍDA:
+    Apenas código HTML (body). Título <h2>Sentinela: Oportunidades</h2>.
+    Seja breve. Destaque prazos.
     """
 
     try:
         res = model.generate_content(prompt)
-        # Limpa marcadores de código se o Gemini colocar
         return res.text.replace("```html", "").replace("```", "")
     except Exception as e:
         print(f"❌ Erro na IA: {e}")
-        return None
+        # Aciona o paraquedas em vez de desistir!
+        return gerar_html_manual(texto_bruto)
 
 def obter_lista_emails():
     """Etapa Extra: Pega os e-mails da Planilha"""
@@ -145,20 +157,16 @@ def enviar_email(corpo_html, destinatario):
         print(f"   ❌ Falha ao enviar para {destinatario}: {e}")
 
 if __name__ == "__main__":
-    # 1. Busca
     dados = buscar_google_elite()
     
-    # 2. Analisa (com IA suave)
+    # Agora a função analisar SEMPRE retorna algo (IA ou Manual)
     relatorio = analisar_com_gemini(dados)
     
     if relatorio:
-        # 3. Pega lista
         lista_vip = obter_lista_emails()
-        
-        # 4. Envia
         print(f"\n📧 Enviando para {len(lista_vip)} pessoas...")
         for email in lista_vip:
             enviar_email(relatorio, email)
         print("🏁 FIM.")
     else:
-        print("📭 Nada encontrado ou erro na IA.")
+        print("📭 Nada encontrado.")
