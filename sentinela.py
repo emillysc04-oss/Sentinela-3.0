@@ -49,7 +49,6 @@ def buscar_google_elite():
     for bloco in blocos:
         filtro_sites = " OR ".join(bloco)
         query_final = f"{query_base} ({filtro_sites})"
-        # Pede 10 resultados por bloco
         payload = json.dumps({"q": query_final, "tbs": "qdr:m", "gl": "br"})
         
         try:
@@ -94,15 +93,15 @@ def gerar_html_manual(texto_bruto):
     return html
 
 def analisar_com_gemini(texto_bruto):
-    """Etapa 2: Gemini PRO formata e resume"""
-    print("🧠 2. ACIONANDO GEMINI PRO...")
+    """Etapa 2: Gemini 1.5 formata e resume"""
+    print("🧠 2. ACIONANDO GEMINI 1.5 FLASH...")
     
     if not texto_bruto: return None
 
     genai.configure(api_key=GEMINI_API_KEY)
     
-    # --- MUDANÇA: Usando 'gemini-pro' para evitar erro 404 ---
-    model = genai.GenerativeModel('gemini-pro')
+    # --- MODELO FLASH DEFINIDO AQUI ---
+    model = genai.GenerativeModel('gemini-1.5-flash')
 
     prompt = f"""
     Você é um Editor de Conteúdo Científico (Física Médica).
@@ -125,24 +124,41 @@ def analisar_com_gemini(texto_bruto):
 
 def obter_lista_emails():
     """Etapa Extra: Pega os e-mails da Planilha"""
-    print("📋 Lendo lista de contatos...")
+    print("📋 Lendo lista de contatos da COLUNA 3...")
+    
+    lista_final = []
+    
+    # Adiciona o dono por segurança
+    if EMAIL_REMETENTE:
+        lista_final.append(EMAIL_REMETENTE)
+
     if not GOOGLE_CREDENTIALS:
-        print("⚠️ Sem credenciais, enviando apenas para o dono.")
-        return [EMAIL_REMETENTE]
+        print("⚠️ Sem credenciais da planilha. Enviando apenas para o dono.")
+        return lista_final
 
     try:
         creds_dict = json.loads(GOOGLE_CREDENTIALS)
         gc = gspread.service_account_from_dict(creds_dict)
         sh = gc.open("Sentinela Emails")
         ws = sh.sheet1
-        emails = ws.col_values(1)
-        # Limpa e valida
-        lista = [e.strip() for e in emails if "@" in e and "email" not in e.lower()]
-        return lista
+        
+        # --- LENDO A COLUNA 3 (C) ---
+        emails_raw = ws.col_values(3)
+        print(f"DEBUG - Dados encontrados na coluna 3: {emails_raw}") 
+        
+        for e in emails_raw:
+            email_limpo = e.strip()
+            # Validação simples
+            if "@" in email_limpo and "email" not in email_limpo.lower():
+                if email_limpo not in lista_final:
+                    lista_final.append(email_limpo)
+        
+        print(f"✅ Lista final processada: {len(lista_final)} destinatários.")
+        return lista_final
+        
     except Exception as e:
         print(f"❌ Erro na planilha: {e}")
-        # Se falhar a planilha, manda pro dono pra avisar
-        return [EMAIL_REMETENTE]
+        return lista_final
 
 def enviar_email(corpo_html, destinatario):
     """Etapa 3: Dispara o e-mail"""
@@ -167,7 +183,6 @@ def enviar_email(corpo_html, destinatario):
 if __name__ == "__main__":
     dados = buscar_google_elite()
     
-    # Gera o relatório (via IA ou Manual)
     relatorio = analisar_com_gemini(dados)
     
     if relatorio:
