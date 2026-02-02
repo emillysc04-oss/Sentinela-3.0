@@ -93,15 +93,15 @@ def gerar_html_manual(texto_bruto):
     return html
 
 def analisar_com_gemini(texto_bruto):
-    """Etapa 2: Gemini 1.5 formata e resume"""
-    print("🧠 2. ACIONANDO GEMINI 1.5 FLASH...")
+    """Etapa 2: Gemini PRO formata e resume"""
+    print("🧠 2. ACIONANDO GEMINI PRO...")
     
     if not texto_bruto: return None
 
     genai.configure(api_key=GEMINI_API_KEY)
     
-    # --- MODELO FLASH DEFINIDO AQUI ---
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    # Voltamos para o PRO, que é mais compatível
+    model = genai.GenerativeModel('gemini-pro')
 
     prompt = f"""
     Você é um Editor de Conteúdo Científico (Física Médica).
@@ -127,13 +127,9 @@ def obter_lista_emails():
     print("📋 Lendo lista de contatos da COLUNA 3...")
     
     lista_final = []
-    
-    # Adiciona o dono por segurança
-    if EMAIL_REMETENTE:
-        lista_final.append(EMAIL_REMETENTE)
+    if EMAIL_REMETENTE: lista_final.append(EMAIL_REMETENTE)
 
     if not GOOGLE_CREDENTIALS:
-        print("⚠️ Sem credenciais da planilha. Enviando apenas para o dono.")
         return lista_final
 
     try:
@@ -142,18 +138,17 @@ def obter_lista_emails():
         sh = gc.open("Sentinela Emails")
         ws = sh.sheet1
         
-        # --- LENDO A COLUNA 3 (C) ---
+        # --- COLUNA 3 ---
         emails_raw = ws.col_values(3)
-        print(f"DEBUG - Dados encontrados na coluna 3: {emails_raw}") 
+        print(f"DEBUG - Leitura: {emails_raw}") 
         
         for e in emails_raw:
             email_limpo = e.strip()
-            # Validação simples
             if "@" in email_limpo and "email" not in email_limpo.lower():
                 if email_limpo not in lista_final:
                     lista_final.append(email_limpo)
         
-        print(f"✅ Lista final processada: {len(lista_final)} destinatários.")
+        print(f"✅ Destinatários válidos: {len(lista_final)}")
         return lista_final
         
     except Exception as e:
@@ -182,7 +177,6 @@ def enviar_email(corpo_html, destinatario):
 
 if __name__ == "__main__":
     dados = buscar_google_elite()
-    
     relatorio = analisar_com_gemini(dados)
     
     if relatorio:
