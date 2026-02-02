@@ -1,0 +1,31 @@
+name: Teste de Conexão
+
+# Isso permite que você rode o robô clicando num botão (Manual)
+on: 
+  workflow_dispatch:
+
+jobs:
+  verificar-google:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Baixa o seu código do repositório
+      - name: 📥 Baixar Código
+        uses: actions/checkout@v3
+
+      # 2. Prepara o Python
+      - name: 🐍 Instalar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      # 3. Instala as bibliotecas (google, pandas, etc.)
+      - name: 📦 Instalar Dependências
+        run: pip install -r requirements.txt
+
+      # 4. Roda o script passando as chaves do cofre
+      - name: 🤖 Rodar Sentinela
+        env:
+          GOOGLE_SEARCH_API_KEY: ${{ secrets.GOOGLE_SEARCH_API_KEY }}
+          SEARCH_ENGINE_ID: ${{ secrets.SEARCH_ENGINE_ID }}
+        run: python sentinela.py
