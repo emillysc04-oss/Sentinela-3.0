@@ -49,7 +49,6 @@ def buscar_google_elite():
     for bloco in blocos:
         filtro_sites = " OR ".join(bloco)
         query_final = f"{query_base} ({filtro_sites})"
-        
         # Pede 10 resultados por bloco
         payload = json.dumps({"q": query_final, "tbs": "qdr:m", "gl": "br"})
         
@@ -57,13 +56,10 @@ def buscar_google_elite():
             response = requests.request("POST", url, headers=headers, data=payload)
             dados = response.json()
             items = dados.get("organic", [])
-            
             for item in items:
                 linha = f"- Título: {item.get('title')}\n  Link: {item.get('link')}\n  Snippet: {item.get('snippet')}\n  Data: {item.get('date', 'N/A')}\n"
                 resultados_texto.append(linha)
-            
             time.sleep(0.5)
-            
         except Exception as e:
             print(f"❌ Erro num bloco: {e}")
 
@@ -71,46 +67,53 @@ def buscar_google_elite():
     return "\n".join(resultados_texto)
 
 def gerar_html_manual(texto_bruto):
-    """PARAQUEDAS: Se a IA falhar, formata um HTML simples"""
+    """PARAQUEDAS: HTML manual se a IA falhar"""
     print("⚠️ Usando formatador manual de emergência...")
-    linhas = texto_bruto.split("- Título: ")
-    html = "<h2>☢️ Sentinela: Relatório de Emergência</h2><p>A IA estava indisponível, mas aqui estão seus links:</p><ul>"
+    if not texto_bruto: return "<p>Nenhum resultado encontrado.</p>"
     
+    linhas = texto_bruto.split("- Título: ")
+    html = "<h2>☢️ Sentinela: Relatório (Modo Manual)</h2><p>Links encontrados:</p><ul>"
+    
+    count = 0
     for item in linhas:
         if "Link: " in item:
             partes = item.split("\n")
             titulo = partes[0].strip()
             link = ""
+            snippet = ""
             for p in partes:
                 if "Link: " in p: link = p.replace("Link: ", "").strip()
+                if "Snippet: " in p: snippet = p.replace("Snippet: ", "").strip()
             
             if link:
-                html += f"<li><a href='{link}'><b>{titulo}</b></a></li>"
+                html += f"<li style='margin-bottom:10px;'><a href='{link}'><b>{titulo}</b></a><br><small>{snippet}</small></li>"
+                count += 1
     
     html += "</ul>"
+    if count == 0: return None
     return html
 
 def analisar_com_gemini(texto_bruto):
-    """Etapa 2: Gemini formata e resume"""
-    print("🧠 2. ACIONANDO GEMINI 1.5 FLASH...")
+    """Etapa 2: Gemini PRO formata e resume"""
+    print("🧠 2. ACIONANDO GEMINI PRO...")
     
     if not texto_bruto: return None
 
     genai.configure(api_key=GEMINI_API_KEY)
     
-    # MUDANÇA IMPORTANTE: Trocamos para o modelo 1.5 que é mais estável
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    # --- MUDANÇA: Usando 'gemini-pro' para evitar erro 404 ---
+    model = genai.GenerativeModel('gemini-pro')
 
     prompt = f"""
     Você é um Editor de Conteúdo Científico (Física Médica).
-    Organize estes links em um e-mail HTML.
+    Organize estes links em um e-mail HTML limpo.
     
     DADOS:
     {texto_bruto}
     
     SAÍDA:
     Apenas código HTML (body). Título <h2>Sentinela: Oportunidades</h2>.
-    Seja breve. Destaque prazos.
+    Use listas <ul>. Destaque prazos.
     """
 
     try:
@@ -118,13 +121,13 @@ def analisar_com_gemini(texto_bruto):
         return res.text.replace("```html", "").replace("```", "")
     except Exception as e:
         print(f"❌ Erro na IA: {e}")
-        # Aciona o paraquedas em vez de desistir!
         return gerar_html_manual(texto_bruto)
 
 def obter_lista_emails():
     """Etapa Extra: Pega os e-mails da Planilha"""
     print("📋 Lendo lista de contatos...")
     if not GOOGLE_CREDENTIALS:
+        print("⚠️ Sem credenciais, enviando apenas para o dono.")
         return [EMAIL_REMETENTE]
 
     try:
@@ -133,13 +136,18 @@ def obter_lista_emails():
         sh = gc.open("Sentinela Emails")
         ws = sh.sheet1
         emails = ws.col_values(1)
-        return [e.strip() for e in emails if "@" in e and "email" not in e.lower()]
+        # Limpa e valida
+        lista = [e.strip() for e in emails if "@" in e and "email" not in e.lower()]
+        return lista
     except Exception as e:
         print(f"❌ Erro na planilha: {e}")
+        # Se falhar a planilha, manda pro dono pra avisar
         return [EMAIL_REMETENTE]
 
 def enviar_email(corpo_html, destinatario):
     """Etapa 3: Dispara o e-mail"""
+    if not destinatario: return
+
     msg = MIMEMultipart()
     msg['From'] = EMAIL_REMETENTE
     msg['To'] = destinatario
@@ -159,12 +167,12 @@ def enviar_email(corpo_html, destinatario):
 if __name__ == "__main__":
     dados = buscar_google_elite()
     
-    # Agora a função analisar SEMPRE retorna algo (IA ou Manual)
+    # Gera o relatório (via IA ou Manual)
     relatorio = analisar_com_gemini(dados)
     
     if relatorio:
         lista_vip = obter_lista_emails()
-        print(f"\n📧 Enviando para {len(lista_vip)} pessoas...")
+        print(f"\n📧 Iniciando disparos para {len(lista_vip)} pessoas...")
         for email in lista_vip:
             enviar_email(relatorio, email)
         print("🏁 FIM.")
