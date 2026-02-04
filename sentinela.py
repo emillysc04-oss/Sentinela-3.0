@@ -227,7 +227,7 @@ def analisar_com_gemini(texto_bruto):
         <span class="prazo">📅 Prazo: DD/MM/AAAA (ou "Fluxo Contínuo")</span>
     </li>
     
-    Se não houver data explícita, use: <span class="prazo">⚠️ Verificar Edital</span>
+    Se não houver data explícita, use: <span class="prazo">⚠️ Prazo: Verificar Edital</span>
     
     DADOS:
     {texto_bruto}
