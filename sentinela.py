@@ -17,8 +17,8 @@ EMAIL_REMETENTE = os.getenv("EMAIL_REMETENTE", "").strip()
 SENHA_APP = os.getenv("SENHA_APP", "").strip()
 GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")
 
-# Link do Logo Oficial do HCPA (Público)
-LOGO_URL = "https://www.hcpa.edu.br/images/logo_hcpa.png"
+# 🖼️ SEU LOGO DO GITHUB
+LOGO_URL = "https://raw.githubusercontent.com/emillysc04-oss/Sentinela-3.0/main/Logo3.png"
 
 # Lista de Sites
 SITES_ALVO = [
@@ -68,39 +68,93 @@ def buscar_google_elite():
     return "\n".join(resultados_texto)
 
 def aplicar_template_profissional(conteudo_ia):
-    """Envelopa o texto da IA no design HCPA Dark Mode"""
+    """Envelopa o texto no Modo Dark Float (Cartões flutuantes sem fundo de caixa)"""
     
     if not conteudo_ia:
         conteudo_ia = "<p style='text-align:center; color:#777;'>Nenhuma oportunidade relevante encontrada hoje.</p>"
 
-    # Cores baseadas no Manual do HCPA (Verde Turquesa)
-    # HCPA Green Principal: #009688
-    # HCPA Light Accent: #80cbc4
-    
     estilos_css = """
-        body { margin: 0; padding: 0; background-color: #121212; font-family: 'Segoe UI', Helvetica, Arial, sans-serif; }
-        .container { max-width: 600px; margin: 0 auto; background-color: #1e1e1e; color: #e0e0e0; border-radius: 8px; overflow: hidden; }
-        .header-bar { height: 6px; background: linear-gradient(90deg, #00695c 0%, #009688 50%, #80cbc4 100%); width: 100%; }
-        .header-content { padding: 35px 20px; text-align: center; border-bottom: 1px solid #333; background-color: #232323; }
-        .logo { max-width: 150px; margin-bottom: 15px; filter: brightness(0) invert(1); opacity: 0.9; } /* Logo branco para fundo escuro */
-        .title { color: #4db6ac; margin: 0; font-size: 26px; font-weight: 300; letter-spacing: 0.5px; text-transform: uppercase; }
-        .subtitle { color: #b2dfdb; font-size: 13px; margin-top: 5px; text-transform: uppercase; letter-spacing: 2px; }
-        .content { padding: 30px 25px; line-height: 1.6; }
+        /* Fundo Geral Escuro */
+        body { margin: 0; padding: 0; background-color: #121212; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         
-        /* Estilização dos Itens da IA */
-        h3 { color: #80cbc4; border-left: 4px solid #009688; padding-left: 12px; margin-top: 30px; font-size: 18px; font-weight: 600; text-transform: uppercase; }
+        /* Container Transparente (O Segredo!) */
+        /* Removemos cor de fundo, borda e sombra da caixa principal */
+        .container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            background-color: transparent; 
+            color: #e0e0e0; 
+            padding: 10px;
+        }
+        
+        /* Barra Decorativa (Opcional, pode remover se quiser mais limpo ainda) */
+        .header-bar { height: 4px; background: linear-gradient(90deg, #004d40 0%, #009688 50%, #80cbc4 100%); width: 100%; border-radius: 4px; margin-bottom: 20px;}
+        
+        /* Cabeçalho */
+        .header-content { text-align: center; margin-bottom: 30px; }
+        .logo { max-width: 180px; margin-bottom: 10px; }
+        .title { color: #4db6ac; margin: 0; font-size: 24px; font-weight: 300; letter-spacing: 1px; text-transform: uppercase; }
+        .subtitle { color: #80cbc4; font-size: 12px; margin-top: 5px; letter-spacing: 2px; text-transform: uppercase; opacity: 0.8; }
+        
+        .content { line-height: 1.6; }
+        
+        /* Títulos de Seção (Flutuantes) */
+        h3 { 
+            color: #80cbc4; 
+            margin-top: 30px; 
+            font-size: 18px; 
+            border-bottom: 1px solid #333; 
+            padding-bottom: 5px; 
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
         ul { list-style-type: none; padding: 0; margin: 0; }
-        li { margin-bottom: 25px; background-color: #262626; padding: 15px; border-radius: 6px; border-left: 2px solid #333; transition: border-left 0.3s; }
-        li:hover { border-left: 2px solid #4db6ac; }
         
-        strong { color: #fff; font-size: 16px; display: block; margin-bottom: 4px; }
-        .resumo { color: #b0bec5; font-size: 14px; display: block; margin-bottom: 8px; line-height: 1.4; }
-        .prazo { color: #ffab91; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; display: inline-block; background: #3e2723; padding: 2px 8px; border-radius: 4px; }
+        /* CARTÕES (Aqui está o design que você gostou) */
+        li { 
+            margin-bottom: 20px; 
+            background-color: #1e1e1e; /* Fundo do cartão */
+            padding: 20px; 
+            border-radius: 8px; /* Cantos arredondados */
+            border: 1px solid #333; /* Borda sutil */
+            border-left: 4px solid #009688; /* Detalhe Verde HCPA */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3); /* Sombra para dar profundidade */
+        }
         
-        a { color: #4db6ac; text-decoration: none; font-weight: bold; font-size: 14px; }
-        a:hover { text-decoration: underline; color: #80cbc4; }
+        /* Título do Item */
+        strong { color: #ffffff; font-size: 16px; display: block; margin-bottom: 6px; }
         
-        .footer { padding: 30px; text-align: center; font-size: 11px; color: #666; border-top: 1px solid #333; background-color: #181818; }
+        /* Resumo */
+        .resumo { color: #b0bec5; font-size: 14px; display: block; margin-bottom: 12px; line-height: 1.4; }
+        
+        /* Prazo (Destaque) */
+        .prazo { 
+            color: #ffab91; 
+            font-size: 11px; 
+            font-weight: bold; 
+            text-transform: uppercase; 
+            background-color: #3e2723;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        
+        /* Botão/Link */
+        a { 
+            color: #4db6ac; 
+            text-decoration: none; 
+            font-weight: bold; 
+            font-size: 12px; 
+            float: right; 
+            border: 1px solid #009688;
+            padding: 4px 10px;
+            border-radius: 4px;
+            margin-top: -2px;
+        }
+        a:hover { background-color: #009688; color: #fff !important; }
+        
+        .footer { padding: 30px; text-align: center; font-size: 11px; color: #555; margin-top: 40px; }
     """
 
     html_template = f"""
@@ -126,11 +180,8 @@ def aplicar_template_profissional(conteudo_ia):
             </div>
             
             <div class="footer">
-                <strong>Hospital de Clínicas de Porto Alegre</strong><br>
-                Rua Ramiro Barcelos, 2350 - Porto Alegre / RS<br>
-                <br>
-                <em>Este é um informativo automático gerado por Inteligência Artificial.<br>
-                Verifique sempre os editais originais.</em>
+                Hospital de Clínicas de Porto Alegre<br>
+                Gerado automaticamente via Inteligência Artificial
             </div>
         </div>
     </body>
@@ -151,7 +202,7 @@ def gerar_html_manual(texto_bruto):
             for p in partes:
                 if "Link: " in p: link = p.replace("Link: ", "").strip()
             if link:
-                html_items += f"<li><strong><a href='{link}'>{titulo}</a></strong><span class='resumo'>Link direto identificado.</span></li>"
+                html_items += f"<li><a href='{link}'>ACESSAR</a><strong>{titulo}</strong><span class='resumo'>Link direto identificado.</span></li>"
     
     return aplicar_template_profissional(f"<h3>Resultados (Modo Manual)</h3><ul>{html_items}</ul>")
 
@@ -163,23 +214,29 @@ def analisar_com_gemini(texto_bruto):
 
     modelo = "gemini-2.5-flash"
     
-    # --- PROMPT ATUALIZADO PARA RESUMO E PRAZO ---
     prompt = f"""
-    Você é um Assistente de Pesquisa do Serviço de Física Médica do HCPA.
-    Analise os dados brutos abaixo e selecione APENAS oportunidades reais (Editais, Bolsas, Eventos, Chamadas).
+    Você é um Assistente do HCPA.
+    Analise os dados e encontre oportunidades de Física Médica.
     
-    REGRAS DE FORMATAÇÃO (HTML PURO):
-    1. NÃO use tags <html>, <head> ou <body>. Retorne apenas o conteúdo.
-    2. Agrupe por categorias (ex: <h3>Editais e Fomento</h3>).
-    3. Para cada item, use a seguinte estrutura exata dentro de um <ul>:
+    PARA CADA ITEM, ENCONTRE O PRAZO (OBRIGATÓRIO).
+    Procure por: "inscrições até", "vencimento", "deadline", "data".
     
+    FORMATO HTML (LIMPO):
+    Não use <html> ou <body>. Apenas o conteúdo.
+    Agrupe por temas (ex: <h3>Editais</h3>).
+    
+    Use esta estrutura para CADA item:
     <li>
-        <strong>Título da Oportunidade</strong> - <a href="LINK_AQUI">ACESSAR</a><br>
-        <span class="resumo">Resumo: Escreva aqui um resumo de 1 ou 2 linhas sobre o objetivo.</span><br>
-        <span class="prazo">📅 Prazo: Data ou "Fluxo Contínuo" (Encontre essa info no texto)</span>
+        <a href="LINK_AQUI">ACESSAR</a>
+        <strong>TÍTULO_DA_OPORTUNIDADE</strong>
+        <span class="resumo">Resumo: (1 linha explicando o objetivo).</span>
+        <br>
+        <span class="prazo">📅 Prazo: DD/MM/AAAA (ou "Fluxo Contínuo")</span>
     </li>
     
-    DADOS PARA ANÁLISE:
+    Se não houver data explícita, use: <span class="prazo">⚠️ Verificar Edital</span>
+    
+    DADOS:
     {texto_bruto}
     """
     
@@ -188,86 +245,3 @@ def analisar_com_gemini(texto_bruto):
     headers = {'Content-Type': 'application/json'}
 
     try:
-        response = requests.post(url, json=payload, headers=headers)
-        
-        if response.status_code == 200:
-            print("   ✅ SUCESSO! A IA gerou o conteúdo.")
-            resultado = response.json()
-            texto_cru_ia = resultado['candidates'][0]['content']['parts'][0]['text']
-            
-            # Limpa marcadores
-            texto_limpo = texto_cru_ia.replace("```html", "").replace("```", "")
-            
-            # Aplica o layout
-            return aplicar_template_profissional(texto_limpo)
-        else:
-            print(f"   ❌ Erro na API ({response.status_code}): {response.text}")
-            return gerar_html_manual(texto_bruto)
-
-    except Exception as e:
-        print(f"   ❌ Erro de conexão: {e}")
-        return gerar_html_manual(texto_bruto)
-
-def obter_lista_emails():
-    """Etapa Extra: Pega os e-mails da Planilha"""
-    print("📋 Lendo lista de contatos da COLUNA 3...")
-    
-    lista_final = []
-    if EMAIL_REMETENTE: lista_final.append(EMAIL_REMETENTE)
-    
-    if not GOOGLE_CREDENTIALS: 
-        return lista_final
-
-    try:
-        creds_dict = json.loads(GOOGLE_CREDENTIALS)
-        gc = gspread.service_account_from_dict(creds_dict)
-        sh = gc.open("Sentinela Emails")
-        ws = sh.sheet1
-        
-        emails_raw = ws.col_values(3)
-        
-        for e in emails_raw:
-            email_limpo = e.strip()
-            if "@" in email_limpo and "email" not in email_limpo.lower():
-                if email_limpo not in lista_final:
-                    lista_final.append(email_limpo)
-        
-        print(f"✅ Destinatários válidos: {len(lista_final)}")
-        return lista_final
-        
-    except Exception as e:
-        print(f"❌ Erro na planilha: {e}")
-        return lista_final
-
-def enviar_email(corpo_html, destinatario):
-    """Etapa 3: Dispara o e-mail"""
-    if not destinatario: return
-
-    msg = MIMEMultipart()
-    msg['From'] = EMAIL_REMETENTE
-    msg['To'] = destinatario
-    msg['Subject'] = f"Sentinela Física Médica - {datetime.now().strftime('%d/%m')}"
-    msg.attach(MIMEText(corpo_html, 'html'))
-
-    try:
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(EMAIL_REMETENTE, SENHA_APP)
-        server.sendmail(EMAIL_REMETENTE, destinatario, msg.as_string())
-        server.quit()
-        print(f"   📤 Enviado para: {destinatario}")
-    except Exception as e:
-        print(f"   ❌ Falha ao enviar para {destinatario}: {e}")
-
-if __name__ == "__main__":
-    dados = buscar_google_elite()
-    relatorio = analisar_com_gemini(dados)
-    
-    if relatorio:
-        lista_vip = obter_lista_emails()
-        print(f"\n📧 Iniciando disparos para {len(lista_vip)} pessoas...")
-        for email in lista_vip:
-            enviar_email(relatorio, email)
-        print("🏁 FIM.")
-    else:
-        print("📭 Nada encontrado.")
