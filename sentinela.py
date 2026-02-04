@@ -172,7 +172,7 @@ def aplicar_template_profissional(conteudo_ia):
             </div>
             
             <div class="footer">
-                Servço de Física Médica e Radioproteção<br>
+                Serviço de Física Médica e Radioproteção<br>
                 Hospital de Clínicas de Porto Alegre<br>
                 Gerado automaticamente via Inteligência Artificial
             </div>
