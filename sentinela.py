@@ -9,7 +9,7 @@ from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 
 # --- CONFIGURAÇÕES ---
-# ✅ MODO SEGURO
+# ✅ MODO SEGURO: A chave vem do GitHub Secrets (NÃO COLE ELA AQUI)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 SERPER_API_KEY = os.getenv("SERPER_API_KEY")
@@ -68,16 +68,16 @@ def buscar_google_elite():
     return "\n".join(resultados_texto)
 
 def aplicar_template_profissional(conteudo_ia):
-    """Envelopa o texto: Clean & Minimalist (Sem fundos escuros)"""
+    """Envelopa o texto: Clean & Minimalist (Tudo Transparente + Borda Verde)"""
     
     if not conteudo_ia:
         conteudo_ia = "<p style='text-align:center; color:#777;'>Nenhuma oportunidade relevante encontrada hoje.</p>"
 
     estilos_css = """
-        /* Fundo Geral: Usa a cor padrão do cliente de e-mail (geralmente branco ou adapta ao tema) */
+        /* Fundo Geral: Transparente (usa o do sistema do usuário) */
         body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         
-        /* CONTAINER: Totalmente invisível */
+        /* CONTAINER: Invisível */
         .container { 
             max-width: 600px; 
             margin: 0 auto; 
@@ -90,7 +90,7 @@ def aplicar_template_profissional(conteudo_ia):
         .title { color: #009688; margin: 0; font-size: 24px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
         .subtitle { color: #555; font-size: 13px; margin-top: 5px; letter-spacing: 1px; text-transform: uppercase; }
         
-        /* Barra de destaque fina */
+        /* Barra Decorativa Fina */
         .header-bar { height: 3px; background: linear-gradient(90deg, #004d40 0%, #009688 50%, #80cbc4 100%); width: 100%; border-radius: 4px; margin-bottom: 30px;}
         
         /* Títulos de Seção */
@@ -105,27 +105,27 @@ def aplicar_template_profissional(conteudo_ia):
         
         ul { list-style-type: none; padding: 0; margin: 0; }
         
-        /* CARTÕES MINIMALISTAS (Sem fundo escuro) */
+        /* CARTÕES (Sem cor de fundo, apenas borda verde) */
         li { 
             margin-bottom: 20px; 
-            background-color: transparent; /* FUNDO TRANSPARENTE */
+            background-color: transparent; 
             padding: 15px; 
-            border: 1px solid #e0e0e0; /* Borda cinza fininha para delimitar */
-            border-left: 5px solid #009688; /* A Borda Verde que você gostou */
+            border: 1px solid #e0e0e0; 
+            border-left: 5px solid #009688; /* O detalhe verde lateral */
             border-radius: 4px;
         }
         
-        /* Texto dentro do cartão (Escuro para leitura) */
+        /* Texto dentro do cartão (Escuro para contraste em fundo claro) */
         strong { color: #004d40; font-size: 16px; display: block; margin-bottom: 6px; }
         .resumo { color: #555555; font-size: 14px; display: block; margin-bottom: 12px; line-height: 1.4; }
         
-        /* Prazo (Destaque Clean) */
+        /* Prazo (Etiqueta Clean) */
         .prazo { 
-            color: #d84315; /* Laranja escuro */
+            color: #d84315; 
             font-size: 12px; 
             font-weight: bold; 
             text-transform: uppercase; 
-            background-color: #fbe9e7; /* Fundo pêssego bem clarinho */
+            background-color: #fbe9e7; /* Fundo pêssego suave */
             padding: 4px 8px;
             border-radius: 4px;
             display: inline-block;
@@ -145,7 +145,7 @@ def aplicar_template_profissional(conteudo_ia):
         }
         a:hover { background-color: #00796b; }
         
-        /* RODAPÉ */
+        /* Rodapé */
         .footer { padding: 30px; text-align: center; font-size: 11px; color: #888; margin-top: 40px; border-top: 1px solid #eee; }
     """
 
@@ -281,41 +281,3 @@ def obter_lista_emails():
                     lista_final.append(email_limpo)
         
         print(f"✅ Destinatários válidos: {len(lista_final)}")
-        return lista_final
-        
-    except Exception as e:
-        print(f"❌ Erro na planilha: {e}")
-        return lista_final
-
-def enviar_email(corpo_html, destinatario):
-    """Etapa 3: Dispara o e-mail"""
-    if not destinatario: return
-
-    msg = MIMEMultipart()
-    msg['From'] = EMAIL_REMETENTE
-    msg['To'] = destinatario
-    msg['Subject'] = f"Sentinela Física Médica - {datetime.now().strftime('%d/%m')}"
-    msg.attach(MIMEText(corpo_html, 'html'))
-
-    try:
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(EMAIL_REMETENTE, SENHA_APP)
-        server.sendmail(EMAIL_REMETENTE, destinatario, msg.as_string())
-        server.quit()
-        print(f"   📤 Enviado para: {destinatario}")
-    except Exception as e:
-        print(f"   ❌ Falha ao enviar para {destinatario}: {e}")
-
-if __name__ == "__main__":
-    dados = buscar_google_elite()
-    relatorio = analisar_com_gemini(dados)
-    
-    if relatorio:
-        lista_vip = obter_lista_emails()
-        print(f"\n📧 Iniciando disparos para {len(lista_vip)} pessoas...")
-        for email in lista_vip:
-            enviar_email(relatorio, email)
-        print("🏁 FIM.")
-    else:
-        print("📭 Nada encontrado.")
