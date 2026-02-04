@@ -9,7 +9,7 @@ from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 
 # --- CONFIGURAÇÕES ---
-# ✅ MODO SEGURO ATIVADO: Puxa a chave dos Secrets do GitHub
+# ✅ MODO SEGURO: Puxa a chave dos Secrets do GitHub
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 SERPER_API_KEY = os.getenv("SERPER_API_KEY")
@@ -17,8 +17,8 @@ EMAIL_REMETENTE = os.getenv("EMAIL_REMETENTE", "").strip()
 SENHA_APP = os.getenv("SENHA_APP", "").strip()
 GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")
 
-# Link do Logo (Se você tiver um link próprio do Serviço, troque aqui)
-LOGO_URL = "https://cdn-icons-png.flaticon.com/512/3063/3063176.png" 
+# Link do Logo (Temporário - troque pelo link real do seu serviço se tiver)
+LOGO_URL = "https://cdn-icons-png.flaticon.com/512/3063/3063176.png"
 
 # Lista de Sites
 SITES_ALVO = [
@@ -88,108 +88,4 @@ def aplicar_template_profissional(conteudo_ia):
         .content {{ padding: 30px 20px; line-height: 1.6; }}
         
         /* Estilização do conteúdo da IA */
-        h3 {{ color: #80cbc4; border-bottom: 1px solid #333; padding-bottom: 8px; margin-top: 25px; font-size: 18px; }}
-        ul {{ padding-left: 20px; margin-bottom: 20px; }}
-        li {{ margin-bottom: 15px; color: #ccc; }}
-        strong {{ color: #fff; }}
-        a {{ color: #4fc3f7; text-decoration: none; }}
-        a:hover {{ text-decoration: underline; }}
-        
-        .footer {{ padding: 20px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #333; background-color: #181818; }}
-    </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header-bar"></div>
-            
-            <div class="header-content">
-                <img src="{LOGO_URL}" alt="Logo Física Médica" class="logo">
-                <h1 class="title">Sistema Sentinela</h1>
-                <div class="subtitle">Monitoramento de Editais e Pesquisa</div>
-            </div>
-            
-            <div class="content">
-                {conteudo_ia}
-            </div>
-            
-            <div class="footer">
-                Hospital de Clínicas de Porto Alegre<br>
-                Serviço de Física Médica e Radioproteção<br>
-                Gerado automaticamente via Inteligência Artificial
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-    return html_template
-
-def gerar_html_manual(texto_bruto):
-    """Backup manual"""
-    print("⚠️ Usando formatador manual...")
-    linhas = texto_bruto.split("- Título: ")
-    html_items = ""
-    for item in linhas:
-        if "Link: " in item:
-            partes = item.split("\n")
-            titulo = partes[0].strip()
-            link = ""
-            for p in partes:
-                if "Link: " in p: link = p.replace("Link: ", "").strip()
-            if link:
-                html_items += f"<li><strong><a href='{link}'>{titulo}</a></strong></li>"
-    
-    return aplicar_template_profissional(f"<h3>Resultados (Modo Manual)</h3><ul>{html_items}</ul>")
-
-def analisar_com_gemini(texto_bruto):
-    """Etapa 2: Inteligência Artificial (Modelo 2.5 Flash)"""
-    print("🧠 2. ACIONANDO GEMINI 2.5 FLASH...")
-    
-    if not texto_bruto: return None
-
-    # Modelo descoberto via teste (funciona com sua chave nova)
-    modelo = "gemini-2.5-flash"
-    
-    prompt = f"""
-    Você é um sistema extrator de dados para Física Médica.
-    Analise a lista abaixo e extraia as oportunidades.
-    
-    IMPORTANTE SOBRE A FORMATAÇÃO:
-    1. Retorne APENAS o código HTML das categorias e itens.
-    2. NÃO inclua tags <html>, <head>, <body>.
-    3. NÃO inclua saudações como "Prezado colega" ou "Atenciosamente".
-    4. NÃO coloque título principal (já tenho no template).
-    
-    ESTRUTURA DESEJADA:
-    - Use <h3> para o nome da categoria (ex: <h3>Chamamentos e Bolsas</h3>).
-    - Use <ul> para a lista de itens.
-    - Em cada <li>, coloque o título em negrito (<strong>) e link no final.
-    
-    DADOS: {texto_bruto}
-    """
-    
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={GEMINI_API_KEY}"
-    payload = {"contents": [{"parts": [{"text": prompt}]}]}
-    headers = {'Content-Type': 'application/json'}
-
-    try:
-        response = requests.post(url, json=payload, headers=headers)
-        
-        if response.status_code == 200:
-            print("   ✅ SUCESSO! A IA gerou o conteúdo.")
-            resultado = response.json()
-            texto_cru_ia = resultado['candidates'][0]['content']['parts'][0]['text']
-            
-            # Limpa marcadores
-            texto_limpo = texto_cru_ia.replace("```html", "").replace("```", "")
-            
-            # Aplica o layout
-            return aplicar_template_profissional(texto_limpo)
-        else:
-            print(f"   ❌ Erro na API ({response.status_code}): {response.text}")
-            return gerar_html_manual(texto_bruto)
-
-    except Exception as e:
-        print(f"   ❌ Erro de conexão: {e}")
-        return gerar_html_manual(texto_bruto)
-
-def obter_lista_emails():
+        h3 {{ color: #80cbc4; border-bottom: 1px solid #333;
