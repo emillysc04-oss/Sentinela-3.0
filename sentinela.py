@@ -4,7 +4,6 @@ import requests
 import smtplib
 import time
 import gspread
-from google import genai  # <--- BIBLIOTECA NOVA E OFICIAL
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
@@ -58,7 +57,7 @@ def buscar_google_elite():
                 linha = f"- Título: {item.get('title')}\n  Link: {item.get('link')}\n  Snippet: {item.get('snippet')}\n  Data: {item.get('date', 'N/A')}\n"
                 resultados_texto.append(linha)
             
-            # MANTENDO A SUA PAUSA ESTRATÉGICA
+            # PAUSA SOLICITADA
             time.sleep(1.0)
             
         except Exception as e:
@@ -68,7 +67,7 @@ def buscar_google_elite():
     return "\n".join(resultados_texto)
 
 def gerar_html_manual(texto_bruto):
-    """PARAQUEDAS: Backup caso a IA falhe"""
+    """PARAQUEDAS: Formatação manual se a API falhar"""
     print("⚠️ Usando formatador manual de emergência...")
     if not texto_bruto: return "<p>Nenhum resultado encontrado.</p>"
     
@@ -90,39 +89,50 @@ def gerar_html_manual(texto_bruto):
     return html
 
 def analisar_com_gemini(texto_bruto):
-    """Etapa 2: Gemini 1.5 Flash (USANDO A NOVA BIBLIOTECA)"""
-    print("🧠 2. ACIONANDO GEMINI 1.5 FLASH (SDK NOVO)...")
+    """Etapa 2: Gemini via CONEXÃO DIRETA (Sem biblioteca)"""
+    print("🧠 2. ACIONANDO GEMINI 1.5 FLASH (Via HTTP)...")
     
     if not texto_bruto: return None
 
+    # URL DIRETA DA API (Isso nunca muda, independente da biblioteca)
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    
+    prompt = f"""
+    Você é um Editor de Conteúdo Científico (Física Médica).
+    Analise a lista de links abaixo e crie um e-mail HTML.
+    
+    DADOS:
+    {texto_bruto}
+    
+    SAÍDA:
+    Apenas código HTML (body). 
+    Título: <h2>Sentinela: Oportunidades da Semana</h2>.
+    Para cada item relevante, faça um breve resumo em <ul>.
+    Destaque prazos em negrito.
+    """
+
+    # Montando o pacote JSON manualmente
+    payload = {
+        "contents": [{
+            "parts": [{"text": prompt}]
+        }]
+    }
+
     try:
-        # --- AQUI É A MÁGICA: SINTAXE NOVA DO GOOGLE ---
-        client = genai.Client(api_key=GEMINI_API_KEY)
-
-        prompt = f"""
-        Você é um Editor de Conteúdo Científico (Física Médica).
-        Analise a lista de links abaixo e crie um e-mail HTML.
+        # Envio direto sem intermediários
+        response = requests.post(url, json=payload, headers={'Content-Type': 'application/json'})
         
-        DADOS:
-        {texto_bruto}
-        
-        SAÍDA:
-        Apenas código HTML (body). 
-        Título: <h2>Sentinela: Oportunidades da Semana</h2>.
-        Para cada item relevante, faça um breve resumo em <ul>.
-        Destaque prazos em negrito.
-        """
-
-        # Comando atualizado que aceita o Flash sem erro 404
-        response = client.models.generate_content(
-            model='gemini-1.5-flash',
-            contents=prompt
-        )
-        
-        return response.text.replace("```html", "").replace("```", "")
+        if response.status_code == 200:
+            resultado = response.json()
+            # Pega o texto lá de dentro do JSON do Google
+            texto_ia = resultado['candidates'][0]['content']['parts'][0]['text']
+            return texto_ia.replace("```html", "").replace("```", "")
+        else:
+            print(f"❌ Erro HTTP da API: {response.status_code} - {response.text}")
+            return gerar_html_manual(texto_bruto)
 
     except Exception as e:
-        print(f"❌ Erro na IA: {e}")
+        print(f"❌ Erro na Conexão Direta: {e}")
         return gerar_html_manual(texto_bruto)
 
 def obter_lista_emails():
