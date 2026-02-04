@@ -162,8 +162,8 @@ def aplicar_template_profissional(conteudo_ia):
         <div class="container">
             <div class="header-content">
                 <img src="{LOGO_URL}" alt="HCPA" class="logo">
-                <h1 class="title">Sistema Sentinela</h1>
-                <div class="subtitle">Serviço de Física Médica e Radioproteção</div>
+                <h1 class="title">Sistema de monitoramento Sentinela</h1>
+                <div class="subtitle">Editais de Pesquisa</div>
             </div>
             <div class="header-bar"></div>
             
@@ -172,6 +172,7 @@ def aplicar_template_profissional(conteudo_ia):
             </div>
             
             <div class="footer">
+                Servço de Física Médica e Radioproteção<br>
                 Hospital de Clínicas de Porto Alegre<br>
                 Gerado automaticamente via Inteligência Artificial
             </div>
