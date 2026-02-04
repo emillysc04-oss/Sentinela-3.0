@@ -17,8 +17,8 @@ EMAIL_REMETENTE = os.getenv("EMAIL_REMETENTE", "").strip()
 SENHA_APP = os.getenv("SENHA_APP", "").strip()
 GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")
 
-# Link do Logo
-LOGO_URL = "https://cdn-icons-png.flaticon.com/512/3063/3063176.png"
+# Link do Logo Oficial do HCPA (Público)
+LOGO_URL = "https://www.hcpa.edu.br/images/logo_hcpa.png"
 
 # Lista de Sites
 SITES_ALVO = [
@@ -68,31 +68,41 @@ def buscar_google_elite():
     return "\n".join(resultados_texto)
 
 def aplicar_template_profissional(conteudo_ia):
-    """Envelopa o texto da IA no design bonito (Dark Mode)"""
+    """Envelopa o texto da IA no design HCPA Dark Mode"""
     
     if not conteudo_ia:
         conteudo_ia = "<p style='text-align:center; color:#777;'>Nenhuma oportunidade relevante encontrada hoje.</p>"
 
-    # --- CORREÇÃO: CSS em variável separada para não dar erro de sintaxe ---
+    # Cores baseadas no Manual do HCPA (Verde Turquesa)
+    # HCPA Green Principal: #009688
+    # HCPA Light Accent: #80cbc4
+    
     estilos_css = """
-        body { margin: 0; padding: 0; background-color: #121212; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .container { max-width: 600px; margin: 0 auto; background-color: #1e1e1e; color: #e0e0e0; }
-        .header-bar { height: 5px; background-color: #009688; width: 100%; }
-        .header-content { padding: 30px 20px; text-align: center; border-bottom: 1px solid #333; }
-        .logo { max-width: 120px; margin-bottom: 15px; }
-        .title { color: #4db6ac; margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }
-        .subtitle { color: #888; font-size: 14px; margin-top: 5px; }
-        .content { padding: 30px 20px; line-height: 1.6; }
-        h3 { color: #80cbc4; border-bottom: 1px solid #333; padding-bottom: 8px; margin-top: 25px; font-size: 18px; }
-        ul { padding-left: 20px; margin-bottom: 20px; }
-        li { margin-bottom: 15px; color: #ccc; }
-        strong { color: #fff; }
-        a { color: #4fc3f7; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-        .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #333; background-color: #181818; }
+        body { margin: 0; padding: 0; background-color: #121212; font-family: 'Segoe UI', Helvetica, Arial, sans-serif; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #1e1e1e; color: #e0e0e0; border-radius: 8px; overflow: hidden; }
+        .header-bar { height: 6px; background: linear-gradient(90deg, #00695c 0%, #009688 50%, #80cbc4 100%); width: 100%; }
+        .header-content { padding: 35px 20px; text-align: center; border-bottom: 1px solid #333; background-color: #232323; }
+        .logo { max-width: 150px; margin-bottom: 15px; filter: brightness(0) invert(1); opacity: 0.9; } /* Logo branco para fundo escuro */
+        .title { color: #4db6ac; margin: 0; font-size: 26px; font-weight: 300; letter-spacing: 0.5px; text-transform: uppercase; }
+        .subtitle { color: #b2dfdb; font-size: 13px; margin-top: 5px; text-transform: uppercase; letter-spacing: 2px; }
+        .content { padding: 30px 25px; line-height: 1.6; }
+        
+        /* Estilização dos Itens da IA */
+        h3 { color: #80cbc4; border-left: 4px solid #009688; padding-left: 12px; margin-top: 30px; font-size: 18px; font-weight: 600; text-transform: uppercase; }
+        ul { list-style-type: none; padding: 0; margin: 0; }
+        li { margin-bottom: 25px; background-color: #262626; padding: 15px; border-radius: 6px; border-left: 2px solid #333; transition: border-left 0.3s; }
+        li:hover { border-left: 2px solid #4db6ac; }
+        
+        strong { color: #fff; font-size: 16px; display: block; margin-bottom: 4px; }
+        .resumo { color: #b0bec5; font-size: 14px; display: block; margin-bottom: 8px; line-height: 1.4; }
+        .prazo { color: #ffab91; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; display: inline-block; background: #3e2723; padding: 2px 8px; border-radius: 4px; }
+        
+        a { color: #4db6ac; text-decoration: none; font-weight: bold; font-size: 14px; }
+        a:hover { text-decoration: underline; color: #80cbc4; }
+        
+        .footer { padding: 30px; text-align: center; font-size: 11px; color: #666; border-top: 1px solid #333; background-color: #181818; }
     """
 
-    # Agora montamos o HTML injetando o CSS e as variáveis
     html_template = f"""
     <!DOCTYPE html>
     <html>
@@ -106,9 +116,9 @@ def aplicar_template_profissional(conteudo_ia):
             <div class="header-bar"></div>
             
             <div class="header-content">
-                <img src="{LOGO_URL}" alt="Logo Física Médica" class="logo">
+                <img src="{LOGO_URL}" alt="HCPA" class="logo">
                 <h1 class="title">Sistema Sentinela</h1>
-                <div class="subtitle">Monitoramento de Editais e Pesquisa</div>
+                <div class="subtitle">Serviço de Física Médica e Radioproteção</div>
             </div>
             
             <div class="content">
@@ -116,9 +126,11 @@ def aplicar_template_profissional(conteudo_ia):
             </div>
             
             <div class="footer">
-                Hospital de Clínicas de Porto Alegre<br>
-                Serviço de Física Médica e Radioproteção<br>
-                Gerado automaticamente via Inteligência Artificial
+                <strong>Hospital de Clínicas de Porto Alegre</strong><br>
+                Rua Ramiro Barcelos, 2350 - Porto Alegre / RS<br>
+                <br>
+                <em>Este é um informativo automático gerado por Inteligência Artificial.<br>
+                Verifique sempre os editais originais.</em>
             </div>
         </div>
     </body>
@@ -139,7 +151,7 @@ def gerar_html_manual(texto_bruto):
             for p in partes:
                 if "Link: " in p: link = p.replace("Link: ", "").strip()
             if link:
-                html_items += f"<li><strong><a href='{link}'>{titulo}</a></strong></li>"
+                html_items += f"<li><strong><a href='{link}'>{titulo}</a></strong><span class='resumo'>Link direto identificado.</span></li>"
     
     return aplicar_template_profissional(f"<h3>Resultados (Modo Manual)</h3><ul>{html_items}</ul>")
 
@@ -149,25 +161,26 @@ def analisar_com_gemini(texto_bruto):
     
     if not texto_bruto: return None
 
-    # Modelo descoberto via teste
     modelo = "gemini-2.5-flash"
     
+    # --- PROMPT ATUALIZADO PARA RESUMO E PRAZO ---
     prompt = f"""
-    Você é um sistema extrator de dados para Física Médica.
-    Analise a lista abaixo e extraia as oportunidades.
+    Você é um Assistente de Pesquisa do Serviço de Física Médica do HCPA.
+    Analise os dados brutos abaixo e selecione APENAS oportunidades reais (Editais, Bolsas, Eventos, Chamadas).
     
-    IMPORTANTE SOBRE A FORMATAÇÃO:
-    1. Retorne APENAS o código HTML das categorias e itens.
-    2. NÃO inclua tags <html>, <head>, <body>.
-    3. NÃO inclua saudações como "Prezado colega" ou "Atenciosamente".
-    4. NÃO coloque título principal (já tenho no template).
+    REGRAS DE FORMATAÇÃO (HTML PURO):
+    1. NÃO use tags <html>, <head> ou <body>. Retorne apenas o conteúdo.
+    2. Agrupe por categorias (ex: <h3>Editais e Fomento</h3>).
+    3. Para cada item, use a seguinte estrutura exata dentro de um <ul>:
     
-    ESTRUTURA DESEJADA:
-    - Use <h3> para o nome da categoria (ex: <h3>Chamamentos e Bolsas</h3>).
-    - Use <ul> para a lista de itens.
-    - Em cada <li>, coloque o título em negrito (<strong>) e link no final.
+    <li>
+        <strong>Título da Oportunidade</strong> - <a href="LINK_AQUI">ACESSAR</a><br>
+        <span class="resumo">Resumo: Escreva aqui um resumo de 1 ou 2 linhas sobre o objetivo.</span><br>
+        <span class="prazo">📅 Prazo: Data ou "Fluxo Contínuo" (Encontre essa info no texto)</span>
+    </li>
     
-    DADOS: {texto_bruto}
+    DADOS PARA ANÁLISE:
+    {texto_bruto}
     """
     
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={GEMINI_API_KEY}"
