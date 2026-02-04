@@ -56,10 +56,7 @@ def buscar_google_elite():
             for item in items:
                 linha = f"- Título: {item.get('title')}\n  Link: {item.get('link')}\n  Snippet: {item.get('snippet')}\n  Data: {item.get('date', 'N/A')}\n"
                 resultados_texto.append(linha)
-            
-            # PAUSA SOLICITADA
-            time.sleep(1.0)
-            
+            time.sleep(1.0) # Pausa estratégica
         except Exception as e:
             print(f"❌ Erro num bloco: {e}")
 
@@ -67,13 +64,12 @@ def buscar_google_elite():
     return "\n".join(resultados_texto)
 
 def gerar_html_manual(texto_bruto):
-    """PARAQUEDAS: Formatação manual se a API falhar"""
+    """PARAQUEDAS: Último recurso"""
     print("⚠️ Usando formatador manual de emergência...")
     if not texto_bruto: return "<p>Nenhum resultado encontrado.</p>"
     
     linhas = texto_bruto.split("- Título: ")
     html = "<h2>☢️ Sentinela: Relatório (Backup)</h2><p>Links encontrados:</p><ul>"
-    
     for item in linhas:
         if "Link: " in item:
             partes = item.split("\n")
@@ -89,51 +85,59 @@ def gerar_html_manual(texto_bruto):
     return html
 
 def analisar_com_gemini(texto_bruto):
-    """Etapa 2: Gemini via CONEXÃO DIRETA (Sem biblioteca)"""
-    print("🧠 2. ACIONANDO GEMINI 1.5 FLASH (Via HTTP)...")
+    """Etapa 2: O Caçador de Modelos"""
+    print("🧠 2. ACIONANDO GEMINI (Modo Multi-Tentativa)...")
     
     if not texto_bruto: return None
 
-    # URL DIRETA DA API (Isso nunca muda, independente da biblioteca)
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-    
+    # LISTA DE MODELOS PARA TENTAR (Do mais novo para o mais velho)
+    modelos_para_tentar = [
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-latest",
+        "gemini-pro",
+        "gemini-1.0-pro"
+    ]
+
     prompt = f"""
     Você é um Editor de Conteúdo Científico (Física Médica).
-    Analise a lista de links abaixo e crie um e-mail HTML.
-    
-    DADOS:
-    {texto_bruto}
-    
-    SAÍDA:
-    Apenas código HTML (body). 
-    Título: <h2>Sentinela: Oportunidades da Semana</h2>.
-    Para cada item relevante, faça um breve resumo em <ul>.
-    Destaque prazos em negrito.
+    Analise a lista de links e crie um e-mail HTML.
+    DADOS: {texto_bruto}
+    SAÍDA: Apenas código HTML (body). Título <h2>Sentinela: Oportunidades</h2>.
+    Use listas <ul>. Destaque prazos.
     """
+    
+    payload = {"contents": [{"parts": [{"text": prompt}]}]}
 
-    # Montando o pacote JSON manualmente
-    payload = {
-        "contents": [{
-            "parts": [{"text": prompt}]
-        }]
-    }
-
-    try:
-        # Envio direto sem intermediários
-        response = requests.post(url, json=payload, headers={'Content-Type': 'application/json'})
+    # Loop para tentar cada modelo até um funcionar
+    for modelo in modelos_para_tentar:
+        print(f"   👉 Tentando modelo: {modelo}...")
         
-        if response.status_code == 200:
-            resultado = response.json()
-            # Pega o texto lá de dentro do JSON do Google
-            texto_ia = resultado['candidates'][0]['content']['parts'][0]['text']
-            return texto_ia.replace("```html", "").replace("```", "")
-        else:
-            print(f"❌ Erro HTTP da API: {response.status_code} - {response.text}")
-            return gerar_html_manual(texto_bruto)
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={GEMINI_API_KEY}"
+        
+        try:
+            response = requests.post(url, json=payload, headers={'Content-Type': 'application/json'})
+            
+            if response.status_code == 200:
+                print(f"   ✅ SUCESSO com o modelo: {modelo}!")
+                resultado = response.json()
+                texto_ia = resultado['candidates'][0]['content']['parts'][0]['text']
+                return texto_ia.replace("```html", "").replace("```", "")
+            
+            elif response.status_code == 404:
+                print(f"   ❌ Modelo {modelo} não encontrado (404). Tentando o próximo...")
+                continue # Pula para o próximo modelo da lista
+            
+            else:
+                print(f"   ⚠️ Erro estranho ({response.status_code}) com {modelo}: {response.text}")
+                continue
 
-    except Exception as e:
-        print(f"❌ Erro na Conexão Direta: {e}")
-        return gerar_html_manual(texto_bruto)
+        except Exception as e:
+            print(f"   ❌ Erro de conexão com {modelo}: {e}")
+            continue
+
+    # Se saiu do loop, nenhum funcionou
+    print("❌❌ TODOS os modelos falharam. Ativando Modo Manual.")
+    return gerar_html_manual(texto_bruto)
 
 def obter_lista_emails():
     """Etapa Extra: Pega os e-mails da Planilha"""
@@ -150,18 +154,14 @@ def obter_lista_emails():
         gc = gspread.service_account_from_dict(creds_dict)
         sh = gc.open("Sentinela Emails")
         ws = sh.sheet1
-        
         emails_raw = ws.col_values(3)
-        
         for e in emails_raw:
             email_limpo = e.strip()
             if "@" in email_limpo and "email" not in email_limpo.lower():
                 if email_limpo not in lista_final:
                     lista_final.append(email_limpo)
-        
         print(f"✅ Destinatários válidos: {len(lista_final)}")
         return lista_final
-        
     except Exception as e:
         print(f"❌ Erro na planilha: {e}")
         return lista_final
@@ -169,13 +169,11 @@ def obter_lista_emails():
 def enviar_email(corpo_html, destinatario):
     """Etapa 3: Dispara o e-mail"""
     if not destinatario: return
-
     msg = MIMEMultipart()
     msg['From'] = EMAIL_REMETENTE
     msg['To'] = destinatario
     msg['Subject'] = f"Sentinela Física Médica - {datetime.now().strftime('%d/%m')}"
     msg.attach(MIMEText(corpo_html, 'html'))
-
     try:
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
@@ -189,7 +187,6 @@ def enviar_email(corpo_html, destinatario):
 if __name__ == "__main__":
     dados = buscar_google_elite()
     relatorio = analisar_com_gemini(dados)
-    
     if relatorio:
         lista_vip = obter_lista_emails()
         print(f"\n📧 Iniciando disparos para {len(lista_vip)} pessoas...")
