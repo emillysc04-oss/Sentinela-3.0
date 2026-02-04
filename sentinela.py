@@ -7,10 +7,15 @@ import gspread
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
+from oauth2client.service_account import ServiceAccountCredentials
 
 # --- CONFIGURAÇÕES ---
+# ⚠️⚠️⚠️ ÁREA DE PERIGO: TESTE NUCLEAR ⚠️⚠️⚠️
+# Cole sua chave nova aqui, DENTRO das aspas. Exemplo: "AIzaSyD..."
+GEMINI_API_KEY = "AIzaSyC5uiHmRvQGf00Qb34qRII2XwuunBRyQ0M" 
+# ⚠️⚠️⚠️ DEPOIS DE FUNCIONAR, NUNCA DEIXE ESSA CHAVE AQUI ⚠️⚠️⚠️
+
 SERPER_API_KEY = os.getenv("SERPER_API_KEY")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 EMAIL_REMETENTE = os.getenv("EMAIL_REMETENTE", "").strip()
 SENHA_APP = os.getenv("SENHA_APP", "").strip()
 GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")
@@ -40,7 +45,6 @@ def buscar_google_elite():
     headers = {'X-API-KEY': SERPER_API_KEY, 'Content-Type': 'application/json'}
     
     resultados_texto = []
-    
     tamanho_bloco = 8
     blocos = [SITES_ALVO[i:i + tamanho_bloco] for i in range(0, len(SITES_ALVO), tamanho_bloco)]
 
@@ -56,7 +60,7 @@ def buscar_google_elite():
             for item in items:
                 linha = f"- Título: {item.get('title')}\n  Link: {item.get('link')}\n  Snippet: {item.get('snippet')}\n  Data: {item.get('date', 'N/A')}\n"
                 resultados_texto.append(linha)
-            time.sleep(1.0) # Pausa estratégica
+            time.sleep(1.0)
         except Exception as e:
             print(f"❌ Erro num bloco: {e}")
 
@@ -64,10 +68,9 @@ def buscar_google_elite():
     return "\n".join(resultados_texto)
 
 def gerar_html_manual(texto_bruto):
-    """PARAQUEDAS: Último recurso"""
+    """PARAQUEDAS: Backup"""
     print("⚠️ Usando formatador manual de emergência...")
     if not texto_bruto: return "<p>Nenhum resultado encontrado.</p>"
-    
     linhas = texto_bruto.split("- Título: ")
     html = "<h2>☢️ Sentinela: Relatório (Backup)</h2><p>Links encontrados:</p><ul>"
     for item in linhas:
@@ -85,19 +88,14 @@ def gerar_html_manual(texto_bruto):
     return html
 
 def analisar_com_gemini(texto_bruto):
-    """Etapa 2: O Caçador de Modelos"""
-    print("🧠 2. ACIONANDO GEMINI (Modo Multi-Tentativa)...")
+    """Etapa 2: O Caçador de Modelos (AGORA COM CHAVE FIXA)"""
+    print("🧠 2. ACIONANDO GEMINI (Teste Nuclear)...")
     
     if not texto_bruto: return None
 
-    # LISTA DE MODELOS PARA TENTAR (Do mais novo para o mais velho)
-    modelos_para_tentar = [
-        "gemini-1.5-flash",
-        "gemini-1.5-flash-latest",
-        "gemini-pro",
-        "gemini-1.0-pro"
-    ]
-
+    # Tenta o modelo Flash, que é o padrão atual
+    modelo = "gemini-1.5-flash"
+    
     prompt = f"""
     Você é um Editor de Conteúdo Científico (Física Médica).
     Analise a lista de links e crie um e-mail HTML.
@@ -107,48 +105,35 @@ def analisar_com_gemini(texto_bruto):
     """
     
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
-
-    # Loop para tentar cada modelo até um funcionar
-    for modelo in modelos_para_tentar:
-        print(f"   👉 Tentando modelo: {modelo}...")
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={GEMINI_API_KEY}"
+    
+    try:
+        print(f"   👉 Testando chave iniciando com: {GEMINI_API_KEY[:5]}...")
+        response = requests.post(url, json=payload, headers={'Content-Type': 'application/json'})
         
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={GEMINI_API_KEY}"
+        if response.status_code == 200:
+            print(f"   ✅ SUCESSO! A IA respondeu.")
+            resultado = response.json()
+            texto_ia = resultado['candidates'][0]['content']['parts'][0]['text']
+            return texto_ia.replace("```html", "").replace("```", "")
         
-        try:
-            response = requests.post(url, json=payload, headers={'Content-Type': 'application/json'})
-            
-            if response.status_code == 200:
-                print(f"   ✅ SUCESSO com o modelo: {modelo}!")
-                resultado = response.json()
-                texto_ia = resultado['candidates'][0]['content']['parts'][0]['text']
-                return texto_ia.replace("```html", "").replace("```", "")
-            
-            elif response.status_code == 404:
-                print(f"   ❌ Modelo {modelo} não encontrado (404). Tentando o próximo...")
-                continue # Pula para o próximo modelo da lista
-            
-            else:
-                print(f"   ⚠️ Erro estranho ({response.status_code}) com {modelo}: {response.text}")
-                continue
+        elif response.status_code == 404:
+            print(f"   ❌ Erro 404. Significa que a chave está errada ou o projeto Google Cloud não ativou a API.")
+            print(f"   Detalhe: {response.text}")
+        else:
+            print(f"   ⚠️ Outro erro ({response.status_code}): {response.text}")
 
-        except Exception as e:
-            print(f"   ❌ Erro de conexão com {modelo}: {e}")
-            continue
+    except Exception as e:
+        print(f"   ❌ Erro de conexão: {e}")
 
-    # Se saiu do loop, nenhum funcionou
-    print("❌❌ TODOS os modelos falharam. Ativando Modo Manual.")
     return gerar_html_manual(texto_bruto)
 
 def obter_lista_emails():
     """Etapa Extra: Pega os e-mails da Planilha"""
     print("📋 Lendo lista de contatos da COLUNA 3...")
-    
     lista_final = []
     if EMAIL_REMETENTE: lista_final.append(EMAIL_REMETENTE)
-
-    if not GOOGLE_CREDENTIALS:
-        return lista_final
-
+    if not GOOGLE_CREDENTIALS: return lista_final
     try:
         creds_dict = json.loads(GOOGLE_CREDENTIALS)
         gc = gspread.service_account_from_dict(creds_dict)
