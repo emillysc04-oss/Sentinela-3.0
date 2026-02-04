@@ -4,14 +4,15 @@ import requests
 import smtplib
 import time
 import gspread
+import google.generativeai as genai
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
-from oauth2client.service_account import ServiceAccountCredentials
 
 # --- CONFIGURAÇÕES ---
 SERPER_API_KEY = os.getenv("SERPER_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# Limpeza de segurança para evitar erro 535
 EMAIL_REMETENTE = os.getenv("EMAIL_REMETENTE", "").strip()
 SENHA_APP = os.getenv("SENHA_APP", "").strip()
 GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")
@@ -33,7 +34,7 @@ SITES_ALVO = [
 ]
 
 def buscar_google_elite():
-    """Etapa 1: Busca os links brutos"""
+    """Etapa 1: Busca os links brutos (Igual ao que funcionou)"""
     print("🚀 1. INICIANDO VARREDURA (SERPER)...")
     
     query_base = '(edital OR chamada OR "call for papers" OR bolsa OR grant) ("física médica" OR radioterapia OR "medical physics")'
@@ -57,7 +58,10 @@ def buscar_google_elite():
             for item in items:
                 linha = f"- Título: {item.get('title')}\n  Link: {item.get('link')}\n  Snippet: {item.get('snippet')}\n  Data: {item.get('date', 'N/A')}\n"
                 resultados_texto.append(linha)
-            time.sleep(0.5)
+            
+            # PAUSA que você pediu para evitar bloqueios
+            time.sleep(1.0)
+            
         except Exception as e:
             print(f"❌ Erro num bloco: {e}")
 
@@ -65,14 +69,13 @@ def buscar_google_elite():
     return "\n".join(resultados_texto)
 
 def gerar_html_manual(texto_bruto):
-    """PARAQUEDAS: HTML manual se a IA falhar"""
+    """PARAQUEDAS: Caso a IA falhe, garante o envio"""
     print("⚠️ Usando formatador manual de emergência...")
     if not texto_bruto: return "<p>Nenhum resultado encontrado.</p>"
     
     linhas = texto_bruto.split("- Título: ")
-    html = "<h2>☢️ Sentinela: Relatório (Modo Manual)</h2><p>Links encontrados:</p><ul>"
+    html = "<h2>☢️ Sentinela: Relatório (Backup)</h2><p>Links encontrados:</p><ul>"
     
-    count = 0
     for item in linhas:
         if "Link: " in item:
             partes = item.split("\n")
@@ -82,55 +85,42 @@ def gerar_html_manual(texto_bruto):
             for p in partes:
                 if "Link: " in p: link = p.replace("Link: ", "").strip()
                 if "Snippet: " in p: snippet = p.replace("Snippet: ", "").strip()
-            
             if link:
                 html += f"<li style='margin-bottom:10px;'><a href='{link}'><b>{titulo}</b></a><br><small>{snippet}</small></li>"
-                count += 1
-    
     html += "</ul>"
-    if count == 0: return None
     return html
 
 def analisar_com_gemini(texto_bruto):
-    """Etapa 2: Gemini via HTTP REQUEST (Modelo PRO)"""
-    print("🧠 2. ACIONANDO GEMINI (Conexão Direta - PRO)...")
+    """Etapa 2: Gemini 1.5 Flash (A configuração que você quer)"""
+    print("🧠 2. ACIONANDO GEMINI 1.5 FLASH...")
     
     if not texto_bruto: return None
 
-    # --- TROQUEI PARA 'gemini-pro' QUE É O MODELO UNIVERSAL ---
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
-    
-    prompt_text = f"""
-    Você é um Editor de Conteúdo Científico (Física Médica).
-    Organize estes links em um e-mail HTML limpo.
-    
-    DADOS:
-    {texto_bruto}
-    
-    SAÍDA:
-    Apenas código HTML (body). Título <h2>Sentinela: Oportunidades</h2>.
-    Use listas <ul>. Destaque prazos.
-    """
-
-    payload = {
-        "contents": [{
-            "parts": [{"text": prompt_text}]
-        }]
-    }
-
     try:
-        response = requests.post(url, json=payload, headers={'Content-Type': 'application/json'})
+        genai.configure(api_key=GEMINI_API_KEY)
         
-        if response.status_code == 200:
-            resultado_json = response.json()
-            texto_final = resultado_json['candidates'][0]['content']['parts'][0]['text']
-            return texto_final.replace("```html", "").replace("```", "")
-        else:
-            print(f"❌ Erro HTTP na IA: {response.status_code} - {response.text}")
-            return gerar_html_manual(texto_bruto)
+        # Usando o modelo FLASH que você quer
+        model = genai.GenerativeModel('gemini-1.5-flash')
+
+        prompt = f"""
+        Você é um Editor de Conteúdo Científico (Física Médica).
+        Analise a lista de links abaixo e crie um e-mail HTML.
+        
+        DADOS:
+        {texto_bruto}
+        
+        SAÍDA:
+        Apenas código HTML (body). 
+        Título: <h2>Sentinela: Oportunidades da Semana</h2>.
+        Para cada item relevante, faça um breve resumo em <ul>.
+        Destaque prazos em negrito.
+        """
+
+        response = model.generate_content(prompt)
+        return response.text.replace("```html", "").replace("```", "")
 
     except Exception as e:
-        print(f"❌ Erro na conexão IA: {e}")
+        print(f"❌ Erro na IA: {e}")
         return gerar_html_manual(texto_bruto)
 
 def obter_lista_emails():
@@ -149,6 +139,7 @@ def obter_lista_emails():
         sh = gc.open("Sentinela Emails")
         ws = sh.sheet1
         
+        # Lendo Coluna 3
         emails_raw = ws.col_values(3)
         
         for e in emails_raw:
