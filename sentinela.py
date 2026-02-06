@@ -2,22 +2,18 @@ import os
 import json
 import requests
 import smtplib
-import time
 import gspread
+import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 
 # --- CONFIGURAÇÕES ---
-# ✅ MODO SEGURO
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-
 SERPER_API_KEY = os.getenv("SERPER_API_KEY")
 EMAIL_REMETENTE = os.getenv("EMAIL_REMETENTE", "").strip()
 SENHA_APP = os.getenv("SENHA_APP", "").strip()
 GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")
-
-# 🖼️ SEU LOGO DO GITHUB
 LOGO_URL = "https://raw.githubusercontent.com/emillysc04-oss/Sentinela-3.0/main/Logo3.png"
 
 # Lista de Sites
@@ -36,16 +32,37 @@ SITES_ALVO = [
     "site:einstein.br", "site:hospitalsiriolibanes.org.br", "site:moinhosdevento.org.br"
 ]
 
-def buscar_google_elite():
-    """Etapa 1: Busca os links brutos"""
-    print("🚀 1. INICIANDO VARREDURA (SERPER)...")
+def notificar_erro_admin(erro_msg):
+    """Envia um e-mail de alerta para você caso o sistema falhe."""
+    print(f"❌ ERRO CRÍTICO: {erro_msg}. Notificando admin...")
+    msg = MIMEMultipart()
+    msg['From'] = EMAIL_REMETENTE
+    msg['To'] = EMAIL_REMETENTE # Envia para você mesma
+    msg['Subject'] = f"🚨 FALHA NO SENTINELA - {datetime.now().strftime('%d/%m')}"
     
+    corpo = f"""
+    <h3>Ocorreu um erro na execução do Sentinela</h3>
+    <p>O sistema não conseguiu enviar os e-mails para a lista.</p>
+    <p><strong>Erro detalhado:</strong> {erro_msg}</p>
+    """
+    msg.attach(MIMEText(corpo, 'html'))
+
+    try:
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(EMAIL_REMETENTE, SENHA_APP)
+        server.sendmail(EMAIL_REMETENTE, EMAIL_REMETENTE, msg.as_string())
+        server.quit()
+    except:
+        pass # Se falhar o envio de erro, não há muito o que fazer.
+
+def buscar_google_elite():
     query_base = '(edital OR chamada OR "call for papers" OR bolsa OR grant) ("física médica" OR radioterapia OR "medical physics")'
     url = "https://google.serper.dev/search"
     headers = {'X-API-KEY': SERPER_API_KEY, 'Content-Type': 'application/json'}
     
-    resultados_texto = []
-    tamanho_bloco = 8
+    resultados = []
+    tamanho_bloco = 10
     blocos = [SITES_ALVO[i:i + tamanho_bloco] for i in range(0, len(SITES_ALVO), tamanho_bloco)]
 
     for bloco in blocos:
@@ -54,110 +71,43 @@ def buscar_google_elite():
         payload = json.dumps({"q": query_final, "tbs": "qdr:m", "gl": "br"})
         
         try:
-            response = requests.request("POST", url, headers=headers, data=payload)
-            dados = response.json()
-            items = dados.get("organic", [])
+            response = requests.post(url, headers=headers, data=payload)
+            items = response.json().get("organic", [])
             for item in items:
-                linha = f"- Título: {item.get('title')}\n  Link: {item.get('link')}\n  Snippet: {item.get('snippet')}\n  Data: {item.get('date', 'N/A')}\n"
-                resultados_texto.append(linha)
-            time.sleep(1.0)
-        except Exception as e:
-            print(f"❌ Erro num bloco: {e}")
+                resultados.append(f"- Título: {item.get('title')}\n  Link: {item.get('link')}\n  Snippet: {item.get('snippet')}\n")
+            time.sleep(0.5)
+        except:
+            continue
+            
+    return "\n".join(resultados)
 
-    print(f"✅ Busca concluída. {len(resultados_texto)} itens para análise.\n")
-    return "\n".join(resultados_texto)
-
-def aplicar_template_profissional(conteudo_ia):
-    """Envelopa o texto: Clean & Minimalist (Sem fundos escuros)"""
+def formatar_html(conteudo_ia):
+    if not conteudo_ia: return None
     
-    if not conteudo_ia:
-        conteudo_ia = "<p style='text-align:center; color:#777;'>Nenhuma oportunidade relevante encontrada hoje.</p>"
-
-    # ATENÇÃO: Se o código quebrar aqui, verifique se copiou as aspas triplas no final!
+    # CSS EXATO QUE VOCÊ ENVIOU
     estilos_css = """
-        /* Fundo Geral */
         body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        
-        /* CONTAINER INVISÍVEL */
-        .container { 
-            max-width: 600px; 
-            margin: 0 auto; 
-            padding: 10px;
-        }
-        
-        /* CABEÇALHO */
+        .container { max-width: 600px; margin: 0 auto; padding: 10px; }
         .header-content { text-align: center; margin-bottom: 30px; }
         .logo { max-width: 180px; margin-bottom: 10px; }
         .title { color: #009688; margin: 0; font-size: 24px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
         .subtitle { color: #555; font-size: 13px; margin-top: 5px; letter-spacing: 1px; text-transform: uppercase; }
-        
-        /* Barra de destaque fina */
         .header-bar { height: 3px; background: linear-gradient(90deg, #004d40 0%, #009688 50%, #80cbc4 100%); width: 100%; border-radius: 4px; margin-bottom: 30px;}
-        
-        /* Títulos de Seção */
-        h3 { 
-            color: #00796b; 
-            margin-top: 40px; 
-            font-size: 18px; 
-            border-bottom: 2px solid #e0e0e0; 
-            padding-bottom: 5px; 
-            text-transform: uppercase;
-        }
-        
+        h3 { color: #00796b; margin-top: 40px; font-size: 18px; border-bottom: 2px solid #e0e0e0; padding-bottom: 5px; text-transform: uppercase; }
         ul { list-style-type: none; padding: 0; margin: 0; }
-        
-        /* CARTÕES MINIMALISTAS (Sem fundo escuro) */
-        li { 
-            margin-bottom: 20px; 
-            background-color: transparent; 
-            padding: 15px; 
-            border: 1px solid #e0e0e0; 
-            border-left: 5px solid #009688; 
-            border-radius: 4px;
-        }
-        
-        /* Texto dentro do cartão */
+        li { margin-bottom: 20px; background-color: transparent; padding: 15px; border: 1px solid #e0e0e0; border-left: 5px solid #009688; border-radius: 4px; }
         strong { color: #004d40; font-size: 16px; display: block; margin-bottom: 6px; }
         .resumo { color: #555555; font-size: 14px; display: block; margin-bottom: 12px; line-height: 1.4; }
-        
-        /* Prazo (Destaque Clean) */
-        .prazo { 
-            color: #d84315; 
-            font-size: 12px; 
-            font-weight: bold; 
-            text-transform: uppercase; 
-            background-color: #fbe9e7; 
-            padding: 4px 8px;
-            border-radius: 4px;
-            display: inline-block;
-        }
-        
-        /* Botão Acessar */
-        a { 
-            background-color: #009688;
-            color: #ffffff !important;
-            text-decoration: none; 
-            font-weight: bold; 
-            font-size: 12px; 
-            float: right; 
-            padding: 5px 12px;
-            border-radius: 4px;
-            margin-top: -5px;
-        }
+        .prazo { color: #d84315; font-size: 12px; font-weight: bold; text-transform: uppercase; background-color: #fbe9e7; padding: 4px 8px; border-radius: 4px; display: inline-block; }
+        a { background-color: #009688; color: #ffffff !important; text-decoration: none; font-weight: bold; font-size: 12px; float: right; padding: 5px 12px; border-radius: 4px; margin-top: -5px; }
         a:hover { background-color: #00796b; }
-        
-        /* RODAPÉ */
         .footer { padding: 30px; text-align: center; font-size: 11px; color: #888; margin-top: 40px; border-top: 1px solid #eee; }
     """
 
-    html_template = f"""
+    return f"""
     <!DOCTYPE html>
     <html>
-    <head>
-    <style>
-        {estilos_css}
-    </style>
-    </head>
+    <head><style>{estilos_css}</style></head>
     <body>
         <div class="container">
             <div class="header-content">
@@ -166,11 +116,7 @@ def aplicar_template_profissional(conteudo_ia):
                 <div class="subtitle">Editais de Pesquisa</div>
             </div>
             <div class="header-bar"></div>
-            
-            <div class="content">
-                {conteudo_ia}
-            </div>
-            
+            <div class="content">{conteudo_ia}</div>
             <div class="footer">
                 Serviço de Física Médica e Radioproteção<br>
                 Hospital de Clínicas de Porto Alegre<br>
@@ -180,144 +126,86 @@ def aplicar_template_profissional(conteudo_ia):
     </body>
     </html>
     """
-    return html_template
 
-def gerar_html_manual(texto_bruto):
-    """Backup manual"""
-    print("⚠️ Usando formatador manual...")
-    linhas = texto_bruto.split("- Título: ")
-    html_items = ""
-    for item in linhas:
-        if "Link: " in item:
-            partes = item.split("\n")
-            titulo = partes[0].strip()
-            link = ""
-            for p in partes:
-                if "Link: " in p: link = p.replace("Link: ", "").strip()
-            if link:
-                html_items += f"<li><a href='{link}'>ACESSAR</a><strong>{titulo}</strong><span class='resumo'>Link direto identificado.</span></li>"
-    
-    return aplicar_template_profissional(f"<h3>Resultados (Modo Manual)</h3><ul>{html_items}</ul>")
-
-def analisar_com_gemini(texto_bruto):
-    """Etapa 2: Inteligência Artificial (Modelo 2.5 Flash)"""
-    print("🧠 2. ACIONANDO GEMINI 2.5 FLASH...")
-    
+def processar_ia(texto_bruto):
     if not texto_bruto: return None
-
-    modelo = "gemini-2.5-flash"
     
     prompt = f"""
-    Você é um Assistente do HCPA.
-    Analise os dados e encontre oportunidades de Física Médica.
-    
+    Você é um Assistente do HCPA. Analise os dados e encontre oportunidades de Física Médica.
     PARA CADA ITEM, ENCONTRE O PRAZO (OBRIGATÓRIO).
-    Procure por: "inscrições até", "vencimento", "deadline", "data".
     
-    FORMATO HTML (LIMPO):
-    Não use <html> ou <body>. Apenas o conteúdo.
+    FORMATO HTML (LIMPO, sem <html>):
     Agrupe por temas (ex: <h3>Editais</h3>).
-    
     Use esta estrutura para CADA item:
     <li>
-        <a href="LINK_AQUI">ACESSAR ➜</a>
-        <strong>TÍTULO_DA_OPORTUNIDADE</strong>
-        <span class="resumo">Resumo: (1 linha explicando o objetivo).</span>
-        <br>
-        <span class="prazo">📅 Prazo: DD/MM/AAAA (ou "Fluxo Contínuo")</span>
+        <a href="LINK">ACESSAR ➜</a>
+        <strong>TÍTULO</strong>
+        <span class="resumo">Resumo curto.</span><br>
+        <span class="prazo">📅 Prazo: DATA</span>
     </li>
-    
-    Se não houver data explícita, use: <span class="prazo">⚠️ Prazo: Verificar Edital</span>
-    
-    DADOS:
-    {texto_bruto}
+    Se sem data: <span class="prazo">⚠️ Prazo: Verificar Edital</span>
+    DADOS: {texto_bruto}
     """
     
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={GEMINI_API_KEY}"
-    payload = {"contents": [{"parts": [{"text": prompt}]}]}
-    headers = {'Content-Type': 'application/json'}
-
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
     try:
-        response = requests.post(url, json=payload, headers=headers)
-        
-        if response.status_code == 200:
-            print("   ✅ SUCESSO! A IA gerou o conteúdo.")
-            resultado = response.json()
-            texto_cru_ia = resultado['candidates'][0]['content']['parts'][0]['text']
-            
-            # Limpa marcadores
-            texto_limpo = texto_cru_ia.replace("```html", "").replace("```", "")
-            
-            # Aplica o layout
-            return aplicar_template_profissional(texto_limpo)
+        resp = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, headers={'Content-Type': 'application/json'})
+        if resp.status_code == 200:
+            raw_text = resp.json()['candidates'][0]['content']['parts'][0]['text']
+            return formatar_html(raw_text.replace("```html", "").replace("```", ""))
         else:
-            print(f"   ❌ Erro na API ({response.status_code}): {response.text}")
-            return gerar_html_manual(texto_bruto)
-
+            raise Exception(f"Erro Gemini: {resp.text}")
     except Exception as e:
-        print(f"   ❌ Erro de conexão: {e}")
-        return gerar_html_manual(texto_bruto)
+        raise e
 
-def obter_lista_emails():
-    """Etapa Extra: Pega os e-mails da Planilha"""
-    print("📋 Lendo lista de contatos da COLUNA 3...")
-    
-    lista_final = []
-    if EMAIL_REMETENTE: lista_final.append(EMAIL_REMETENTE)
-    
-    if not GOOGLE_CREDENTIALS: 
-        return lista_final
-
+def obter_emails():
+    if not GOOGLE_CREDENTIALS: return [EMAIL_REMETENTE]
+    lista = [EMAIL_REMETENTE]
     try:
-        creds_dict = json.loads(GOOGLE_CREDENTIALS)
-        gc = gspread.service_account_from_dict(creds_dict)
-        sh = gc.open("Sentinela Emails")
-        ws = sh.sheet1
-        
-        emails_raw = ws.col_values(3)
-        
-        for e in emails_raw:
-            email_limpo = e.strip()
-            if "@" in email_limpo and "email" not in email_limpo.lower():
-                if email_limpo not in lista_final:
-                    lista_final.append(email_limpo)
-        
-        print(f"✅ Destinatários válidos: {len(lista_final)}")
-        return lista_final
-        
-    except Exception as e:
-        print(f"❌ Erro na planilha: {e}")
-        return lista_final
+        gc = gspread.service_account_from_dict(json.loads(GOOGLE_CREDENTIALS))
+        raw = gc.open("Sentinela Emails").sheet1.col_values(3)
+        for e in raw:
+            if "@" in e and "email" not in e.lower() and e.strip() not in lista:
+                lista.append(e.strip())
+        return lista
+    except:
+        return lista # Retorna pelo menos o admin se a planilha falhar
 
-def enviar_email(corpo_html, destinatario):
-    """Etapa 3: Dispara o e-mail"""
-    if not destinatario: return
-
-    msg = MIMEMultipart()
-    msg['From'] = EMAIL_REMETENTE
-    msg['To'] = destinatario
-    msg['Subject'] = f"Sentinela Física Médica - {datetime.now().strftime('%d/%m')}"
-    msg.attach(MIMEText(corpo_html, 'html'))
-
+def enviar(html, destinos):
     try:
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
         server.login(EMAIL_REMETENTE, SENHA_APP)
-        server.sendmail(EMAIL_REMETENTE, destinatario, msg.as_string())
+        
+        for email in destinos:
+            msg = MIMEMultipart()
+            msg['From'] = EMAIL_REMETENTE
+            msg['To'] = email
+            msg['Subject'] = f"Sentinela Física Médica - {datetime.now().strftime('%d/%m')}"
+            msg.attach(MIMEText(html, 'html'))
+            server.sendmail(EMAIL_REMETENTE, email, msg.as_string())
+            print(f"📤 Enviado: {email}")
+            
         server.quit()
-        print(f"   📤 Enviado para: {destinatario}")
     except Exception as e:
-        print(f"   ❌ Falha ao enviar para {destinatario}: {e}")
+        raise e
 
 if __name__ == "__main__":
-    dados = buscar_google_elite()
-    relatorio = analisar_com_gemini(dados)
-    
-    if relatorio:
-        lista_vip = obter_lista_emails()
-        print(f"\n📧 Iniciando disparos para {len(lista_vip)} pessoas...")
-        for email in lista_vip:
-            enviar_email(relatorio, email)
-        print("🏁 FIM.")
-    else:
-        print("📭 Nada encontrado.")
+    print("🚀 Sentinela Iniciado.")
+    try:
+        # 1. Busca
+        dados = buscar_google_elite()
+        if not dados: raise Exception("Nenhum dado encontrado no Google Search.")
+        
+        # 2. IA e Layout
+        email_html = processar_ia(dados)
+        
+        # 3. Lista de Emails
+        destinatarios = obter_emails()
+        
+        # 4. Envio
+        enviar(email_html, destinatarios)
+        print("🏁 Finalizado com sucesso.")
+        
+    except Exception as e:
+        notificar_erro_admin(str(e))
