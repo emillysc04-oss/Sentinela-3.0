@@ -3,25 +3,25 @@ name: Rodar Sentinela
 on: 
   workflow_dispatch:      # Botão manual
   schedule:
-    - cron: '0 10 * * 1'  # Roda toda segunda-feira às 10h (UTC)
+    - cron: '30 9 * * *'  # Roda toda segunda-feira às 10h (UTC)
 
 jobs:
   executar:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Baixar Código
+      - name: Baixar Código
         uses: actions/checkout@v3
 
-      - name: 🐍 Instalar Python
+      - name: Instalar Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.12'
 
-      - name: 📦 Instalar Dependências
+      - name: Instalar Dependências
         run: pip install -r requirements.txt
 
-      - name: 🤖 Rodar Sentinela
+      - name: Rodar Sentinela
         env:
           SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
