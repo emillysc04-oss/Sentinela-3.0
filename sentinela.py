@@ -36,18 +36,15 @@ def notificar_erro_admin(erro_msg):
     msg['To'] = EMAIL_REMETENTE
     msg['Subject'] = f"FALHA NO SENTINELA - {datetime.now().strftime('%d/%m')}"
     
-    corpo = f"""
-    <p><strong>Erro detalhado:</strong> {erro_msg}</p>
-    """
+    corpo = f"<p><strong>Erro detalhado:</strong> {erro_msg}</p>"
     msg.attach(MIMEText(corpo, 'html'))
-
 
     server = smtplib.SMTP('smtp.gmail.com', 587)
     server.starttls()
     server.login(EMAIL_REMETENTE, SENHA_APP)
     server.sendmail(EMAIL_REMETENTE, EMAIL_REMETENTE, msg.as_string())
     server.quit()
-   
+
 def buscar_google_elite():
     query_base = '(edital OR chamada OR "call for papers" OR bolsa OR grant) ("física médica" OR radioterapia OR "medical physics")'
     url = "https://google.serper.dev/search"
@@ -116,6 +113,8 @@ def formatar_html(conteudo_ia):
     """
 
 def processar_ia(texto_bruto):    
+    if not texto_bruto: return None
+
     prompt = f"""
     Você é um Assistente do HCPA. Analise os dados e encontre oportunidades de Física Médica.
     PARA CADA ITEM, ENCONTRE O PRAZO (OBRIGATÓRIO).
@@ -133,21 +132,26 @@ def processar_ia(texto_bruto):
     """
     
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
-
+    
     resp = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, headers={'Content-Type': 'application/json'})
-        raw_text = resp.json()['candidates'][0]['content']['parts'][0]['text']
-        return formatar_html(raw_text.replace("```html", "").replace("```", ""))
+    
+    raw_text = resp.json()['candidates'][0]['content']['parts'][0]['text']
+    return formatar_html(raw_text.replace("```html", "").replace("```", ""))
 
 def obter_emails():
     lista = [EMAIL_REMETENTE]
+    
     gc = gspread.service_account_from_dict(json.loads(GOOGLE_CREDENTIALS))
     raw = gc.open("Sentinela Emails").sheet1.col_values(3)
     for e in raw:
-        
+        if "@" in e and "email" not in e.lower():
             lista.append(e.strip())
+            
     return lista
-   
+    
 def enviar(html, destinos):
+    if not html: return
+
     server = smtplib.SMTP('smtp.gmail.com', 587)
     server.starttls()
     server.login(EMAIL_REMETENTE, SENHA_APP)
@@ -166,11 +170,8 @@ def enviar(html, destinos):
 if __name__ == "__main__":
     try:
         dados = buscar_google_elite()
-        
         email_html = processar_ia(dados)
-        
         destinatarios = obter_emails()
-        
         enviar(email_html, destinatarios)
         
     except Exception as e:
