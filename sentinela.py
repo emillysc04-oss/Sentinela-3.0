@@ -122,6 +122,7 @@ def processar_ia(texto_bruto):
     FORMATO HTML (LIMPO, sem <html>):
     AGRUPE POR TEMAS (ex: <h3>Editais e Bolsas</h3>, <h3>Congressos e Eventos</h3>).
     Não escreva introduções ou conclusões
+    em cada tema, deixe no topo os itens que você encontrou os prazos, caso nao deixe abaixo
     Use esta estrutura para CADA item:
     <li>
         <a href="LINK">ACESSAR ➜</a>
